@@ -192,10 +192,14 @@ internal class Network
     /// </summary>
     /// <param name="parent"></param>
     public Network(Network parent) 
-    { 
+    {
+        //TODO: Cloning IMPL.
+        throw new NotImplementedException();
     }
 
     public long TotalSpikes => _totalEnqueuedSpikes;
+
+    public IEnumerable<IOBuffer> IOBuffers => _ioBuffers;
 
     public double SpikedPercentage => (double)_neurons.Count(x => x.WasSpiked) / _neurons.Count();
 
@@ -475,4 +479,29 @@ internal class Network
         &&  x.Output1 != null 
         &&  x.Output2 != null 
         &&  x.IOBuffer == null);
+
+    internal void Mutate()
+    {
+        var neuronIndex = _random.NextInt32(0, _neurons.Count(), _ioBufferExclusions);
+        var outputIndex = _random.Next(0, 2);
+        var neuron = _neurons[neuronIndex];
+
+        if (outputIndex == 0 && neuron.Output0Weight.HasValue)
+        {
+            neuron.Output0Weight = _random.NextDouble();
+        }
+        else if (outputIndex == 1 && neuron.Output1Weight.HasValue)
+        {
+            neuron.Output1Weight = _random.NextDouble();
+        }
+        else if (outputIndex == 2 && neuron.Output2Weight.HasValue)
+        {
+            neuron.Output2Weight = _random.NextDouble();
+        }
+    }
+
+    internal object First(Func<object, bool> value)
+    {
+        throw new NotImplementedException();
+    }
 }
