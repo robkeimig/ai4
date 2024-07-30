@@ -33,7 +33,6 @@ internal class Network
         {
             var neuron = new Neuron
             {
-                SpikeHistory = new List<Spike>(),
                 Inputs = new List<Neuron>(),
                 //Type = NeuronType.Excitatory,
                 Type = _random.NextInt32(0, 10) switch
@@ -264,7 +263,6 @@ internal class Network
     private void ProcessPendingSpike(long t, PriorityQueue<Spike, long> spikeQueue, Spike spike)
     {
         var spikeTarget = spike.Target;
-        spikeTarget.SpikeHistory.Add(spike);
         spikeTarget.WasSpiked = true;
 
         switch (spikeTarget.Type)
@@ -417,13 +415,16 @@ internal class Network
                     break;
 
                 case IOBufferRole.CursorWrite:
-                    var writeInputNeuron = spikeTarget.IOBuffer.AssignedNeurons.First(x => x.IOBufferRole == IOBufferRole.CursorWriteInput);
-                    var writeInputNeuronSpikeHistory = writeInputNeuron.SpikeHistory;
-                    if (writeInputNeuronSpikeHistory.Count < 2) { break; }
-                    var lastTwoSpikes = writeInputNeuronSpikeHistory.OrderBy(x => x.ArrivalTime).TakeLast(2);
-                    var tickDelta = lastTwoSpikes.Last().ArrivalTime - lastTwoSpikes.First().ArrivalTime;
-                    var value = (byte)(tickDelta % 0xFF);
-                    spikeTarget.IOBuffer.WriteCursor(value);
+                    throw new NotImplementedException(); //TODO: Implement differential pair signaling. One extra role.
+                    //Just use the neuronA.LastSpikeTime - neuronB.LastSpikeTime to derive a value.
+
+                    //var writeInputNeuron = spikeTarget.IOBuffer.AssignedNeurons.First(x => x.IOBufferRole == IOBufferRole.CursorWriteInput);
+                    //var writeInputNeuronSpikeHistory = writeInputNeuron.SpikeHistory;
+                    //if (writeInputNeuronSpikeHistory.Count < 2) { break; }
+                    //var lastTwoSpikes = writeInputNeuronSpikeHistory.OrderBy(x => x.ArrivalTime).TakeLast(2);
+                    //var tickDelta = lastTwoSpikes.Last().ArrivalTime - lastTwoSpikes.First().ArrivalTime;
+                    //var value = (byte)(tickDelta % 0xFF);
+                    //spikeTarget.IOBuffer.WriteCursor(value);
                     break;
             }
         }

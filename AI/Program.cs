@@ -2,10 +2,11 @@
 using AI;
 
 var network = new Network(
-    neuronCount: 1_000_000,
+    neuronCount: 100_000,
     ioBuffers: new List<IOBuffer>
     {
-        new IOBuffer("hello world!", IOBufferAccess.Read, false)
+        new IOBuffer("hello world!", IOBufferAccess.Read, false),
+        new IOBuffer(5, IOBufferAccess.ReadWrite, true),
         //...
     });
 

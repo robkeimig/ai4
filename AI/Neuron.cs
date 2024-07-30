@@ -14,7 +14,6 @@ public class Neuron
     public int? Output2Delay { get; set; }
     public double? Output2Weight { get; set; }
     public List<Neuron> Inputs { get; set; }
-    public List<Spike> SpikeHistory { get; set; }
     public IOBuffer? IOBuffer;
     public IOBufferRole? IOBufferRole;
     public bool WasSpiked { get; set; }
