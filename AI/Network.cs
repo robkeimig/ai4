@@ -1,4 +1,6 @@
-﻿namespace AI;
+﻿using CommandLine;
+
+namespace AI;
 
 internal class Network
 {
@@ -262,12 +264,215 @@ internal class Network
 
     private void ProcessSpike(long t, PriorityQueue<Spike, long> spikeQueue, Spike spike)
     {
-        //...
+        var spikeTarget = spike.Target;
+        spikeTarget.SpikeHistory.Add(spike);
+
+        //Leak charge. This is the moment we simulate leakage.
+        var simulationTickDelta = t - spikeTarget.LastSimulationTime;
+        var chargeLeakageDecimations = (int)(simulationTickDelta / _ticksPerChargeDecimation);
+        spikeTarget.Charge = Math.Max(0, spikeTarget.Charge * Math.Pow(0.9f, chargeLeakageDecimations));
+        spikeTarget.LastSimulationTime = t;
+        
+        switch (spikeTarget.Type)
+        {
+            case NeuronType.Inhibitory:
+
+                if (spike.Charge <= 0)
+                {
+                    break; //Inhibitory neurons do not process other inhibitory spikes.
+                }
+
+                spikeTarget.Charge += spike.Charge;
+
+                if (spikeTarget.Charge >= 1f)
+                {
+                    SendDownstreamSpikes(t, spikeTarget, spikeQueue, isInhibitory: true);
+                    spikeTarget.Charge = 0f;
+                }
+
+                break;
+            case NeuronType.Excitatory:
+
+                spikeTarget.Charge += spike.Charge;
+                spikeTarget.Charge = Math.Clamp(spikeTarget.Charge, 0f, 1f); 
+
+                if (spikeTarget.Charge >= 1f)
+                {
+                    SendDownstreamSpikes(t, spikeTarget, spikeQueue, isInhibitory: false);
+                    HandleIoBufferRoles(t, spikeTarget, spikeQueue);
+                }
+
+                break;
+        }
+    }
+
+    private void HandleIoBufferRoles(long tick, Neuron spikeTarget, PriorityQueue<Spike, long> spikeQueue)
+    {
+        if (spikeTarget.IOBuffer != null)
+        {
+            switch (spikeTarget.IOBufferRole)
+            {
+                //Do nothing in these cases.
+                case IOBufferRole.CursorWriteInput:
+                case IOBufferRole.CursorReadOutput:
+                case IOBufferRole.CursorMaxLimitNotifier:
+                case IOBufferRole.CursorMinLimitNotifier:
+                    break;
+
+                //We should decrement the cursor. If the method returns false, we need to send a limit notification using the Min Limit Notifier mapped role neuron.
+                case IOBufferRole.CursorDecrementer:
+                    if (spikeTarget.IOBuffer.DecrementCursor())
+                    {
+                        //throw new NotImplementedException();
+                    }
+                    else
+                    {
+                        //throw new NotImplementedException();
+                    }
+                    break;
+
+                //We should increment the cursor. If the method returns false, we need to send a limit notification using the Max Limit Notifier mapped role neuron.
+                case IOBufferRole.CursorIncrementer:
+                    if (spikeTarget.IOBuffer.IncrementCursor())
+                    {
+                        //throw new NotImplementedException();
+                    }
+                    else
+                    {
+                        //throw new NotImplementedException();
+                    }
+                    break;
+
+                case IOBufferRole.CursorRead:
+                    var readOutputNeuron = spikeTarget.IOBuffer.AssignedNeurons.First(x => x.IOBufferRole == IOBufferRole.CursorReadOutput);
+
+                    if (readOutputNeuron.Output0 is not null)
+                    {
+                        var arrivalTime = tick + readOutputNeuron.Output0Delay.Value;
+                        var arrivalTimeDelta = tick + readOutputNeuron.Output0Delay.Value + spikeTarget.IOBuffer.ReadCursor().Value;
+
+                        spikeQueue.Enqueue(new Spike
+                        {
+                            Charge = 0xFF,
+                            ArrivalTime = arrivalTime,
+                            Source = readOutputNeuron,
+                            Target = readOutputNeuron.Output0
+                        }, arrivalTime);
+
+                        spikeQueue.Enqueue(new Spike
+                        {
+                            Charge = 0xFF,
+                            ArrivalTime = arrivalTimeDelta,
+                            Source = readOutputNeuron,
+                            Target = readOutputNeuron.Output0
+                        }, arrivalTimeDelta);
+                    }
+
+                    if (readOutputNeuron.Output1 is not null)
+                    {
+                        var arrivalTime = tick + readOutputNeuron.Output1Delay.Value;
+                        var arrivalTimeDelta = tick + readOutputNeuron.Output1Delay.Value + spikeTarget.IOBuffer.ReadCursor().Value;
+
+                        spikeQueue.Enqueue(new Spike
+                        {
+                            Charge = 0xFF,
+                            ArrivalTime = arrivalTime,
+                            Source = readOutputNeuron,
+                            Target = readOutputNeuron.Output1
+                        }, arrivalTime);
+
+                        spikeQueue.Enqueue(new Spike
+                        {
+                            Charge = 0xFF,
+                            ArrivalTime = arrivalTimeDelta,
+                            Source = readOutputNeuron,
+                            Target = readOutputNeuron.Output1
+                        }, arrivalTimeDelta);
+                    }
+
+                    if (readOutputNeuron.Output2 is not null)
+                    {
+                        var arrivalTime = tick + readOutputNeuron.Output2Delay.Value;
+                        var arrivalTimeDelta = tick + readOutputNeuron.Output2Delay.Value + spikeTarget.IOBuffer.ReadCursor().Value;
+
+                        spikeQueue.Enqueue(new Spike
+                        {
+                            Charge = 0xFF,
+                            ArrivalTime = arrivalTime,
+                            Source = readOutputNeuron,
+                            Target = readOutputNeuron.Output2
+                        }, arrivalTime);
+
+                        spikeQueue.Enqueue(new Spike
+                        {
+                            Charge = 0xFF,
+                            ArrivalTime = arrivalTimeDelta,
+                            Source = readOutputNeuron,
+                            Target = readOutputNeuron.Output2
+                        }, arrivalTimeDelta);
+                    }
+
+                    break;
+
+                case IOBufferRole.CursorWrite:
+                    var writeInputNeuron = spikeTarget.IOBuffer.AssignedNeurons.First(x => x.IOBufferRole == IOBufferRole.CursorWriteInput);
+                    var writeInputNeuronSpikeHistory = writeInputNeuron.SpikeHistory;
+                    if (writeInputNeuronSpikeHistory.Count < 2) { break; }
+                    var lastTwoSpikes = writeInputNeuronSpikeHistory.OrderBy(x => x.ArrivalTime).TakeLast(2);
+                    var tickDelta = lastTwoSpikes.Last().ArrivalTime - lastTwoSpikes.First().ArrivalTime;
+                    var value = (byte)(tickDelta % 0xFF);
+                    spikeTarget.IOBuffer.WriteCursor(value);
+                    break;
+            }
+        }
+    }
+
+    private void SendDownstreamSpikes(long tick, Neuron spikeTarget, PriorityQueue<Spike, long> spikeQueue, bool isInhibitory)
+    {
+        if (spikeTarget.Output0 != null)
+        {
+            var out0ArrivalTime = tick + spikeTarget.Output0Delay.Value;
+
+            spikeQueue.Enqueue(new Spike
+            {
+                ArrivalTime = out0ArrivalTime,
+                Charge = spikeTarget.Output0Weight.Value * (isInhibitory ? -1.0f : 1.0f),
+                Source = spikeTarget,
+                Target = spikeTarget.Output0
+            }, out0ArrivalTime);
+        }
+
+        if (spikeTarget.Output1 != null)
+        {
+            var out1ArrivalTime = tick + spikeTarget.Output1Delay.Value;
+
+            spikeQueue.Enqueue(new Spike
+            {
+                ArrivalTime = out1ArrivalTime,
+                Charge = spikeTarget.Output1Weight.Value * (isInhibitory ? -1.0f : 1.0f),
+                Source = spikeTarget,
+                Target = spikeTarget.Output1
+            }, out1ArrivalTime);
+        }
+
+        if (spikeTarget.Output2 != null)
+        {
+            var out2ArrivalTime = tick + spikeTarget.Output2Delay.Value;
+
+            spikeQueue.Enqueue(new Spike
+            {
+                ArrivalTime = out2ArrivalTime,
+                Charge = spikeTarget.Output2Weight.Value * (isInhibitory ? -1.0f : 1.0f),
+                Source = spikeTarget,
+                Target = spikeTarget.Output2
+            }, out2ArrivalTime);
+        }
     }
 
     private Neuron NextWellConnectedNonIoNeuron() => 
         _neurons.First(x => 
-            x.Inputs.Count > 3 
+            x.Type == NeuronType.Excitatory
+        &&  x.Inputs.Count > 3 
         &&  x.Output0 != null 
         &&  x.Output1 != null 
         &&  x.Output2 != null 
