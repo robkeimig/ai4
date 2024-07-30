@@ -3,7 +3,6 @@
 public class Neuron
 {
     public NeuronType Type { get; set; }
-    public long LastSimulationTime { get; set; }
     public double Charge { get; set; }
     public Neuron? Output0 { get; set; }
     public int? Output0Delay { get; set; }
@@ -18,4 +17,5 @@ public class Neuron
     public List<Spike> SpikeHistory { get; set; }
     public IOBuffer? IOBuffer;
     public IOBufferRole? IOBufferRole;
+    public bool WasSpiked { get; set; }
 }

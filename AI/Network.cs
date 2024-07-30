@@ -1,32 +1,28 @@
-﻿using CommandLine;
-
-namespace AI;
+﻿namespace AI;
 
 internal class Network
 {
     readonly int _maxConnectivityDelayTicks;
     readonly int _minConnectivityDelayTicks;
     readonly int _spikeInjectionIntervalTicks;
-    readonly int _ticksPerChargeDecimation;
     readonly Neuron _energyInjectionNeuron;
     readonly Neuron[] _neurons;
     readonly List<IOBuffer> _ioBuffers;
     readonly LcgRandom _random;
-    readonly List<int> _ioBufferExclusions; 
+    readonly List<int> _ioBufferExclusions;
+    long _totalEnqueuedSpikes;
 
     public Network(
         long neuronCount,
         List<IOBuffer> ioBuffers,
-        int maxConnectivityDelayTicks = 5_000,
+        int maxConnectivityDelayTicks = 10_000,
         int minConnectivityDelayTicks = 100,
-        int spikeInjectionIntervalTicks = 100,
-        int ticksPerChargeDecimation = 1_000,
+        int spikeInjectionIntervalTicks = 10,
         long randomSeed = 333)
     {
         _maxConnectivityDelayTicks = maxConnectivityDelayTicks;
         _minConnectivityDelayTicks = minConnectivityDelayTicks;
         _spikeInjectionIntervalTicks = spikeInjectionIntervalTicks;
-        _ticksPerChargeDecimation = ticksPerChargeDecimation;
         _random = new LcgRandom(randomSeed);
         _ioBuffers = new List<IOBuffer>();
         _ioBufferExclusions = new List<int>();
@@ -39,20 +35,18 @@ internal class Network
             {
                 SpikeHistory = new List<Spike>(),
                 Inputs = new List<Neuron>(),
-                Type = _random.NextInt32(0,10) switch
+                //Type = NeuronType.Excitatory,
+                Type = _random.NextInt32(0, 10) switch
                 {
                     0 => NeuronType.Inhibitory,
                     1 => NeuronType.Inhibitory,
-
                     2 => NeuronType.Excitatory,
                     3 => NeuronType.Excitatory,
-
                     4 => NeuronType.Excitatory,
-                    5 => NeuronType.Excitatory,
 
+                    5 => NeuronType.Excitatory,
                     6 => NeuronType.Excitatory,
                     7 => NeuronType.Excitatory,
-
                     8 => NeuronType.Excitatory,
                     9 => NeuronType.Excitatory,
                 }
@@ -86,9 +80,9 @@ internal class Network
             neuron.Output2Delay = _random.NextInt32(_minConnectivityDelayTicks, _maxConnectivityDelayTicks);
 
             //Initialize weights randomly. These are what we will be training.
-            neuron.Output0Weight = _random.NextByte();
-            neuron.Output1Weight = _random.NextByte();
-            neuron.Output2Weight = _random.NextByte();
+            neuron.Output0Weight = _random.NextDouble();
+            neuron.Output1Weight = _random.NextDouble();
+            neuron.Output2Weight = _random.NextDouble();
 
             //Add backreferences to the current neuron to the downstream peers we established above.
             neuron.Output0.Inputs.Add(neuron);
@@ -210,6 +204,10 @@ internal class Network
     { 
     }
 
+    public long TotalSpikes => _totalEnqueuedSpikes;
+
+    public double SpikedPercentage => (double)_neurons.Count(x => x.WasSpiked) / _neurons.Count();
+
     public string Statistics()
     {
         var inhibitoryNeurons = _neurons.Count(x => x.Type == NeuronType.Inhibitory);
@@ -229,7 +227,7 @@ internal class Network
         {
             if (t % 1_000_000 == 0)
             {
-                Console.WriteLine($"Network Simulating t = {t}");
+                Console.WriteLine($"Network Simulating t = {t}; Queue = {spikeQueue.Count}");
             }
 
             //Process items from the priority queue until either:
@@ -241,7 +239,7 @@ internal class Network
                 if (priority <= t)
                 {
                     spikeQueue.Dequeue();
-                    ProcessSpike(t, spikeQueue, spike);
+                    ProcessPendingSpike(t, spikeQueue, spike);
                 }
                 else
                 {
@@ -252,6 +250,7 @@ internal class Network
             //Inject random energy into the network
             if (t % _spikeInjectionIntervalTicks == 0)
             {
+                _totalEnqueuedSpikes++;
                 spikeQueue.Enqueue(new Spike
                 {
                     Charge = 0xFF,
@@ -262,17 +261,12 @@ internal class Network
         }
     }
 
-    private void ProcessSpike(long t, PriorityQueue<Spike, long> spikeQueue, Spike spike)
+    private void ProcessPendingSpike(long t, PriorityQueue<Spike, long> spikeQueue, Spike spike)
     {
         var spikeTarget = spike.Target;
         spikeTarget.SpikeHistory.Add(spike);
+        spikeTarget.WasSpiked = true;
 
-        //Leak charge. This is the moment we simulate leakage.
-        var simulationTickDelta = t - spikeTarget.LastSimulationTime;
-        var chargeLeakageDecimations = (int)(simulationTickDelta / _ticksPerChargeDecimation);
-        spikeTarget.Charge = Math.Max(0, spikeTarget.Charge * Math.Pow(0.9f, chargeLeakageDecimations));
-        spikeTarget.LastSimulationTime = t;
-        
         switch (spikeTarget.Type)
         {
             case NeuronType.Inhibitory:
@@ -286,7 +280,8 @@ internal class Network
 
                 if (spikeTarget.Charge >= 1f)
                 {
-                    SendDownstreamSpikes(t, spikeTarget, spikeQueue, isInhibitory: true);
+                    EnqueueSpikes(t, spikeTarget, spikeQueue, isInhibitory: true);
+                    //Inhibitory neurons are not assigned to IO buffer roles at Network creation time.
                     spikeTarget.Charge = 0f;
                 }
 
@@ -298,8 +293,9 @@ internal class Network
 
                 if (spikeTarget.Charge >= 1f)
                 {
-                    SendDownstreamSpikes(t, spikeTarget, spikeQueue, isInhibitory: false);
+                    EnqueueSpikes(t, spikeTarget, spikeQueue, isInhibitory: false);
                     HandleIoBufferRoles(t, spikeTarget, spikeQueue);
+                    spikeTarget.Charge = 0f;
                 }
 
                 break;
@@ -366,6 +362,8 @@ internal class Network
                             Source = readOutputNeuron,
                             Target = readOutputNeuron.Output0
                         }, arrivalTimeDelta);
+
+                        _totalEnqueuedSpikes+=2;
                     }
 
                     if (readOutputNeuron.Output1 is not null)
@@ -388,6 +386,8 @@ internal class Network
                             Source = readOutputNeuron,
                             Target = readOutputNeuron.Output1
                         }, arrivalTimeDelta);
+
+                        _totalEnqueuedSpikes += 2;
                     }
 
                     if (readOutputNeuron.Output2 is not null)
@@ -410,6 +410,8 @@ internal class Network
                             Source = readOutputNeuron,
                             Target = readOutputNeuron.Output2
                         }, arrivalTimeDelta);
+
+                        _totalEnqueuedSpikes += 2;
                     }
 
                     break;
@@ -427,7 +429,7 @@ internal class Network
         }
     }
 
-    private void SendDownstreamSpikes(long tick, Neuron spikeTarget, PriorityQueue<Spike, long> spikeQueue, bool isInhibitory)
+    private void EnqueueSpikes(long tick, Neuron spikeTarget, PriorityQueue<Spike, long> spikeQueue, bool isInhibitory)
     {
         if (spikeTarget.Output0 != null)
         {
@@ -440,6 +442,8 @@ internal class Network
                 Source = spikeTarget,
                 Target = spikeTarget.Output0
             }, out0ArrivalTime);
+
+            _totalEnqueuedSpikes ++;
         }
 
         if (spikeTarget.Output1 != null)
@@ -453,6 +457,8 @@ internal class Network
                 Source = spikeTarget,
                 Target = spikeTarget.Output1
             }, out1ArrivalTime);
+
+            _totalEnqueuedSpikes++;
         }
 
         if (spikeTarget.Output2 != null)
@@ -466,6 +472,8 @@ internal class Network
                 Source = spikeTarget,
                 Target = spikeTarget.Output2
             }, out2ArrivalTime);
+
+            _totalEnqueuedSpikes++;
         }
     }
 

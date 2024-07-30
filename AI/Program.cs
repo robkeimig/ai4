@@ -2,7 +2,7 @@
 using AI;
 
 var network = new Network(
-    neuronCount: 100_000,
+    neuronCount: 1_000_000,
     ioBuffers: new List<IOBuffer>
     {
         new IOBuffer("hello world!", IOBufferAccess.Read, false)
@@ -11,4 +11,6 @@ var network = new Network(
 
 Console.WriteLine(network.Statistics());
 
-network.Simulate(100_000_000);
+network.Simulate(10_000_000);
+Console.WriteLine(network.TotalSpikes);
+Console.WriteLine(network.SpikedPercentage);
