@@ -16,9 +16,9 @@ internal class Network
         long neuronCount,
         List<IOBuffer> ioBuffers,
         int maxConnectivityDelayTicks = 10_000,
-        int minConnectivityDelayTicks = 100,
+        int minConnectivityDelayTicks = 10,
         int spikeInjectionIntervalTicks = 10,
-        long randomSeed = 333)
+        long randomSeed = 123)
     {
         _maxConnectivityDelayTicks = maxConnectivityDelayTicks;
         _minConnectivityDelayTicks = minConnectivityDelayTicks;
@@ -34,21 +34,7 @@ internal class Network
             var neuron = new Neuron
             {
                 Inputs = new List<Neuron>(),
-                //Type = NeuronType.Excitatory,
-                Type = _random.NextInt32(0, 10) switch
-                {
-                    0 => NeuronType.Inhibitory,
-                    1 => NeuronType.Inhibitory,
-                    2 => NeuronType.Excitatory,
-                    3 => NeuronType.Excitatory,
-                    4 => NeuronType.Excitatory,
-
-                    5 => NeuronType.Excitatory,
-                    6 => NeuronType.Excitatory,
-                    7 => NeuronType.Excitatory,
-                    8 => NeuronType.Excitatory,
-                    9 => NeuronType.Excitatory,
-                }
+                Type = (_random.NextInt32(0, 100) < 20) ? NeuronType.Inhibitory : NeuronType.Excitatory,
             };
 
             neurons[x] = neuron;
@@ -423,16 +409,11 @@ internal class Network
                     break;
 
                 case IOBufferRole.CursorWrite:
-                    //throw new NotImplementedException(); //TODO: Implement differential pair signaling. One extra role.
-                    //Just use the neuronA.LastSpikeTime - neuronB.LastSpikeTime to derive a value.
-
-                    //var writeInputNeuron = spikeTarget.IOBuffer.AssignedNeurons.First(x => x.IOBufferRole == IOBufferRole.CursorWriteInput);
-                    //var writeInputNeuronSpikeHistory = writeInputNeuron.SpikeHistory;
-                    //if (writeInputNeuronSpikeHistory.Count < 2) { break; }
-                    //var lastTwoSpikes = writeInputNeuronSpikeHistory.OrderBy(x => x.ArrivalTime).TakeLast(2);
-                    //var tickDelta = lastTwoSpikes.Last().ArrivalTime - lastTwoSpikes.First().ArrivalTime;
-                    //var value = (byte)(tickDelta % 0xFF);
-                    //spikeTarget.IOBuffer.WriteCursor(value);
+                    var writeInputANeuron = spikeTarget.IOBuffer.AssignedNeurons.First(x => x.IOBufferRole == IOBufferRole.CursorWriteInputA);
+                    var writeInputBNeuron = spikeTarget.IOBuffer.AssignedNeurons.First(x => x.IOBufferRole == IOBufferRole.CursorWriteInputB);
+                    var tickDelta = Math.Abs(writeInputANeuron.LastSpikeTime - writeInputBNeuron.LastSpikeTime);
+                    var value = (byte)(tickDelta % 255);
+                    spikeTarget.IOBuffer.WriteCursor(value);
                     break;
             }
         }
