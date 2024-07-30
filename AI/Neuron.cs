@@ -17,4 +17,5 @@ public class Neuron
     public IOBuffer? IOBuffer;
     public IOBufferRole? IOBufferRole;
     public bool WasSpiked { get; set; }
+    public long LastSpikeTime { get; set; }
 }

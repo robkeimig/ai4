@@ -184,11 +184,17 @@ internal class Network
                 iobuffer.AssignedNeurons.Add(cursorWriteNeuron);
                 _ioBufferExclusions.Add(Array.IndexOf(_neurons, cursorWriteNeuron));
 
-                var cursorWriteInputNeuron = NextWellConnectedNonIoNeuron();    //The neuron that is *sampled* by buffer writing operation. This is a sidechannel technique using spike history on the neuron.
-                cursorWriteInputNeuron.IOBuffer = iobuffer;
-                cursorWriteInputNeuron.IOBufferRole = IOBufferRole.CursorWriteInput;
-                iobuffer.AssignedNeurons.Add(cursorWriteInputNeuron);
-                _ioBufferExclusions.Add(Array.IndexOf(_neurons, cursorWriteInputNeuron));
+                var cursorWriteInputANeuron = NextWellConnectedNonIoNeuron();    //The neuron that is *sampled* by buffer writing operation. This is a sidechannel technique using spike history on the neuron.
+                cursorWriteInputANeuron.IOBuffer = iobuffer;
+                cursorWriteInputANeuron.IOBufferRole = IOBufferRole.CursorWriteInputA;
+                iobuffer.AssignedNeurons.Add(cursorWriteInputANeuron);
+                _ioBufferExclusions.Add(Array.IndexOf(_neurons, cursorWriteInputANeuron));
+
+                var cursorWriteInputBNeuron = NextWellConnectedNonIoNeuron();    //The neuron that is *sampled* by buffer writing operation. This is a sidechannel technique using spike history on the neuron.
+                cursorWriteInputBNeuron.IOBuffer = iobuffer;
+                cursorWriteInputBNeuron.IOBufferRole = IOBufferRole.CursorWriteInputB;
+                iobuffer.AssignedNeurons.Add(cursorWriteInputBNeuron);
+                _ioBufferExclusions.Add(Array.IndexOf(_neurons, cursorWriteInputBNeuron));
             }
         }
 
@@ -264,6 +270,7 @@ internal class Network
     {
         var spikeTarget = spike.Target;
         spikeTarget.WasSpiked = true;
+        spikeTarget.LastSpikeTime = spike.ArrivalTime;
 
         switch (spikeTarget.Type)
         {
@@ -307,7 +314,8 @@ internal class Network
             switch (spikeTarget.IOBufferRole)
             {
                 //Do nothing in these cases.
-                case IOBufferRole.CursorWriteInput:
+                case IOBufferRole.CursorWriteInputA:    //Last spike time already written.
+                case IOBufferRole.CursorWriteInputB:
                 case IOBufferRole.CursorReadOutput:
                 case IOBufferRole.CursorMaxLimitNotifier:
                 case IOBufferRole.CursorMinLimitNotifier:
@@ -347,7 +355,7 @@ internal class Network
 
                         spikeQueue.Enqueue(new Spike
                         {
-                            Charge = 0xFF,
+                            Charge = 1f,
                             ArrivalTime = arrivalTime,
                             Source = readOutputNeuron,
                             Target = readOutputNeuron.Output0
@@ -355,7 +363,7 @@ internal class Network
 
                         spikeQueue.Enqueue(new Spike
                         {
-                            Charge = 0xFF,
+                            Charge = 1f,
                             ArrivalTime = arrivalTimeDelta,
                             Source = readOutputNeuron,
                             Target = readOutputNeuron.Output0
@@ -371,7 +379,7 @@ internal class Network
 
                         spikeQueue.Enqueue(new Spike
                         {
-                            Charge = 0xFF,
+                            Charge = 1f,
                             ArrivalTime = arrivalTime,
                             Source = readOutputNeuron,
                             Target = readOutputNeuron.Output1
@@ -379,7 +387,7 @@ internal class Network
 
                         spikeQueue.Enqueue(new Spike
                         {
-                            Charge = 0xFF,
+                            Charge = 1f,
                             ArrivalTime = arrivalTimeDelta,
                             Source = readOutputNeuron,
                             Target = readOutputNeuron.Output1
@@ -395,7 +403,7 @@ internal class Network
 
                         spikeQueue.Enqueue(new Spike
                         {
-                            Charge = 0xFF,
+                            Charge = 1f,
                             ArrivalTime = arrivalTime,
                             Source = readOutputNeuron,
                             Target = readOutputNeuron.Output2
@@ -403,7 +411,7 @@ internal class Network
 
                         spikeQueue.Enqueue(new Spike
                         {
-                            Charge = 0xFF,
+                            Charge = 1f,
                             ArrivalTime = arrivalTimeDelta,
                             Source = readOutputNeuron,
                             Target = readOutputNeuron.Output2
@@ -415,7 +423,7 @@ internal class Network
                     break;
 
                 case IOBufferRole.CursorWrite:
-                    throw new NotImplementedException(); //TODO: Implement differential pair signaling. One extra role.
+                    //throw new NotImplementedException(); //TODO: Implement differential pair signaling. One extra role.
                     //Just use the neuronA.LastSpikeTime - neuronB.LastSpikeTime to derive a value.
 
                     //var writeInputNeuron = spikeTarget.IOBuffer.AssignedNeurons.First(x => x.IOBufferRole == IOBufferRole.CursorWriteInput);

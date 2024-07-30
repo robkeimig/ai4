@@ -21,9 +21,10 @@ public enum IOBufferRole
     CursorReadOutput,
 
     /// <summary>
-    /// This neuron is sampled by the buffer using the spike history collection to determine the appropriate value to write (tick differential last 2 spikes % 255).
+    /// The last spike time between these neurons determines the output.
     /// </summary>
-    CursorWriteInput,
+    CursorWriteInputA,
+    CursorWriteInputB,
 
     /// <summary>
     /// Advances the cursor forward 1 byte.
