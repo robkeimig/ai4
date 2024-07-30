@@ -193,8 +193,92 @@ internal class Network
     /// <param name="parent"></param>
     public Network(Network parent) 
     {
-        //TODO: Cloning IMPL.
-        throw new NotImplementedException();
+        _neurons = new Neuron[parent._neurons.Length];
+        _ioBuffers = new List<IOBuffer>();
+        _ioBufferExclusions = new List<int>();
+        _maxConnectivityDelayTicks = parent._maxConnectivityDelayTicks;
+        _minConnectivityDelayTicks = parent._minConnectivityDelayTicks;
+        _spikeInjectionIntervalTicks = parent._spikeInjectionIntervalTicks;
+        _random = parent._random;
+
+        var neuronCloneMap = new Dictionary<Neuron, Neuron>();
+        var neuronCloneQueue = new Queue<Neuron>();
+        neuronCloneQueue.Enqueue(parent._neurons[0]);
+
+        while (neuronCloneQueue.Count > 0)
+        {
+            var current = neuronCloneQueue.Dequeue();
+
+            if (!neuronCloneMap.ContainsKey(current))
+            {
+                var clone = new Neuron
+                {
+                    Inputs = new List<Neuron>(),
+                    Type = current.Type
+                };
+
+                neuronCloneMap[current] = clone;
+
+                if (current.Output0 != null && !neuronCloneMap.ContainsKey(current.Output0)) neuronCloneQueue.Enqueue(current.Output0);
+                if (current.Output1 != null && !neuronCloneMap.ContainsKey(current.Output1)) neuronCloneQueue.Enqueue(current.Output1);
+                if (current.Output2 != null && !neuronCloneMap.ContainsKey(current.Output2)) neuronCloneQueue.Enqueue(current.Output2);
+            }
+        }
+
+        foreach (var kvp in neuronCloneMap)
+        {
+            var original = kvp.Key;
+            var clone = kvp.Value;
+
+            if (original.Output0 != null)
+            {
+                clone.Output0 = neuronCloneMap[original.Output0];
+                clone.Output0Delay = original.Output0Delay;
+                clone.Output0Weight = original.Output0Weight;
+            }
+
+            if (original.Output1 != null)
+            {
+                clone.Output1 = neuronCloneMap[original.Output1];
+                clone.Output1Delay = original.Output1Delay;
+                clone.Output1Weight = original.Output1Weight;
+            }
+
+            if (original.Output2 != null)
+            {
+                clone.Output2 = neuronCloneMap[original.Output2];
+                clone.Output2Delay = original.Output2Delay;
+                clone.Output2Weight = original.Output2Weight;
+            }
+
+            foreach (var input in original.Inputs)
+            {
+                clone.Inputs.Add(neuronCloneMap[input]);
+            }
+        }
+
+        for (int x = 0; x < _neurons.Length; x++)
+        {
+            _neurons[x] = neuronCloneMap[parent._neurons[x]];
+        }
+
+        foreach (var ioBuffer in parent._ioBuffers)
+        {
+            var clonedIoBuffer = new IOBuffer(ioBuffer, neuronCloneMap);
+
+            foreach (var ioBufferNeuron in ioBuffer.AssignedNeurons)
+            {
+                var clonedIoBufferNeuron = neuronCloneMap[ioBufferNeuron];
+                clonedIoBufferNeuron.IOBuffer = clonedIoBuffer;
+                clonedIoBufferNeuron.IOBufferRole = ioBufferNeuron.IOBufferRole;
+                _ioBufferExclusions.Add(Array.IndexOf(_neurons, clonedIoBufferNeuron));
+            }
+
+            _ioBuffers.Add(clonedIoBuffer);
+            
+        }
+
+        _energyInjectionNeuron = neuronCloneMap[parent._energyInjectionNeuron];
     }
 
     public long TotalSpikes => _totalEnqueuedSpikes;
@@ -220,10 +304,10 @@ internal class Network
 
         for (long t = 0; t < timeLimitTicks; t++)
         {
-            if (t % 1_000_000 == 0)
-            {
-                Console.WriteLine($"Network Simulating t = {t}; Queue = {spikeQueue.Count}");
-            }
+            //if (t % 100_000 == 0)
+            //{
+            //    Console.WriteLine($"Network Simulating t = {t}; Queue = {spikeQueue.Count}");
+            //}
 
             //Process items from the priority queue until either:
             //1. It is empty.
@@ -498,10 +582,5 @@ internal class Network
         {
             neuron.Output2Weight = _random.NextDouble();
         }
-    }
-
-    internal object First(Func<object, bool> value)
-    {
-        throw new NotImplementedException();
     }
 }
