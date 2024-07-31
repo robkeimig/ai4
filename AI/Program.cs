@@ -4,7 +4,7 @@ using System.Text;
 
 var outputBuffer = new IOBuffer(26, IOBufferAccess.ReadWrite, true);
 var random = new LcgRandom(111);
-var neuronCount = 2_644;
+var neuronCount = 20_000;
 
 var network = new Network(
     neuronCount: neuronCount,
@@ -57,7 +57,17 @@ while (true)
         }
     });
 
-    var top10 = top100Networks.OrderBy(x => x.Value).Take(10).ToList();
+    List<KeyValuePair<Network, double>> top10;
+
+    if (stuckCount > 9)
+    {
+        top10 = top100Networks.OrderBy(x => x.Value).Where(x=>x.Value < double.MaxValue).TakeLast(10).ToList();
+    }
+    else
+    {
+        top10 = top100Networks.OrderBy(x => x.Value).Take(10).ToList();
+    }
+    
     var bestOutput = top10[0].Key.IOBuffers.First(x => x.Access == IOBufferAccess.ReadWrite).Buffer;
     Console.WriteLine("Best Score: " + top10[0].Value + " - " + Encoding.UTF8.GetString(bestOutput));
 
@@ -78,33 +88,23 @@ while (true)
         var existing = new Network(n.Key);
         top100Networks[existing] = double.MaxValue;
 
-        for(int x = 0; x < 10 * (stuckCount + 1); x++)
+        for(int x = 0; x < 10; x++)
         {
             var clone = new Network(n.Key);
             clone.Mutate();
-
-            if (stuckCount > 10 && x > 10)
+            
+            if (x < 5)
             {
-                for (int y = 0; y < neuronCount; y++)
+                for (int y = 0; y < x; y++)
                 {
                     clone.Mutate();
                 }
             }
             else
             {
-                if (x < 5)
+                for (int y = 0; y < neuronCount / 10; y++)
                 {
-                    for (int y = 0; y < x; y++)
-                    {
-                        clone.Mutate();
-                    }
-                }
-                else
-                {
-                    for (int y = 0; y < neuronCount / 10; y++)
-                    {
-                        clone.Mutate();
-                    }
+                    clone.Mutate();
                 }
             }
 
