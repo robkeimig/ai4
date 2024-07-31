@@ -50,6 +50,7 @@ while (true)
         }
         //TODO: Ensure all input read BEFORE first output write.
         //Penalize depending on how many ticks we violated by.
+        //Penalize also off a base "thinking time" scalar.
         //This rule follows after RCR and before WCR.
         else if (wcr < 1.0f)
         {
