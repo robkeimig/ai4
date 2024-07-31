@@ -26,15 +26,18 @@ for (int x = 0; x < 10; x++)
     top100Networks.Add(clone, double.MaxValue);
 }
 
+double lastScore = double.MaxValue;
+var stuckCount = 0;
+
 while (true)
 {
     Parallel.ForEach(top100Networks, (network) =>
     {
-        network.Key.Simulate(1_000_000_000, 5_000_000);
+        network.Key.Simulate(1_000_000_000, 1_000_000);
         var outputBuffer = network.Key.IOBuffers.First(x => x.Access == IOBufferAccess.ReadWrite);
         var inputBuffer = network.Key.IOBuffers.First(x => x.Access == IOBufferAccess.Read);
         var output = network.Key.IOBuffers.First(x => x.Access == IOBufferAccess.ReadWrite).Buffer;
-        Console.WriteLine(Encoding.UTF8.GetString(output));
+        //Console.WriteLine(Encoding.UTF8.GetString(output));
         var outputMSE = Scoring.CalculateMSE(expectedOutput, output);
         var outputLev = Scoring.ComputeLevenshteinDistance(expectedOutput, output);
         var rcr = inputBuffer.ReadCoverageRatio();
@@ -50,13 +53,24 @@ while (true)
         }
         else
         {
-            top100Networks[network.Key] += outputMSE + outputLev;
+            top100Networks[network.Key] += outputMSE + outputLev;            
         }
     });
 
     var top10 = top100Networks.OrderBy(x => x.Value).Take(10).ToList();
+    var bestOutput = top10[0].Key.IOBuffers.First(x => x.Access == IOBufferAccess.ReadWrite).Buffer;
+    Console.WriteLine("Best Score: " + top10[0].Value + " - " + Encoding.UTF8.GetString(bestOutput));
 
-    Console.WriteLine("Best Score: " + top10[0].Value);
+    if (top10[0].Value == lastScore)
+    {
+        stuckCount++;
+    }
+    else
+    {
+        lastScore = top10[0].Value;
+        stuckCount = 0;
+    }
+
     top100Networks.Clear();
 
     foreach (var n in top10)
@@ -64,23 +78,33 @@ while (true)
         var existing = new Network(n.Key);
         top100Networks[existing] = double.MaxValue;
 
-        for(int x = 0; x < 10; x++)
+        for(int x = 0; x < 10 * (stuckCount + 1); x++)
         {
             var clone = new Network(n.Key);
             clone.Mutate();
 
-            if (x < 5)
+            if (stuckCount > 10 && x > 10)
             {
-                for (int y = 0; y < x; y++)
+                for (int y = 0; y < neuronCount; y++)
                 {
                     clone.Mutate();
                 }
             }
             else
             {
-                for (int y = 0; y < neuronCount / 10; y++)
+                if (x < 5)
                 {
-                    clone.Mutate();
+                    for (int y = 0; y < x; y++)
+                    {
+                        clone.Mutate();
+                    }
+                }
+                else
+                {
+                    for (int y = 0; y < neuronCount / 10; y++)
+                    {
+                        clone.Mutate();
+                    }
                 }
             }
 
