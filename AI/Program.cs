@@ -48,6 +48,9 @@ while (true)
         {
             top100Networks[network.Key] = 1_000_000_000 - (int)(1_000_000_000 * rcr);
         }
+        //TODO: Ensure all input read BEFORE first output write.
+        //Penalize depending on how many ticks we violated by.
+        //This rule follows after RCR and before WCR.
         else if (wcr < 1.0f)
         {
             top100Networks[network.Key] = 1_000_000 - (int)(1_000_000 * wcr);
