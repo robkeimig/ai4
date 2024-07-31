@@ -1,6 +1,7 @@
 ﻿//
 using AI;
 using System.Text;
+using System.Xml;
 
 var outputBuffer = new IOBuffer(26, IOBufferAccess.ReadWrite, true);
 var random = new LcgRandom(111);
@@ -88,19 +89,16 @@ while (true)
         var existing = new Network(n.Key);
         top100Networks[existing] = double.MaxValue;
 
-        for(int x = 0; x < 10; x++)
+        for(int x = 0; x < 20; x++)
         {
             var clone = new Network(n.Key);
-            clone.Mutate();
-            
-            if (x < 5)
+
+            for (int y = 0; y < x; y++)
             {
-                for (int y = 0; y < x; y++)
-                {
-                    clone.Mutate();
-                }
+                clone.Mutate();
             }
-            else
+            
+            if (x == 0)
             {
                 for (int y = 0; y < neuronCount / 10; y++)
                 {
