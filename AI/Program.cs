@@ -4,7 +4,7 @@ using System.Text;
 
 var outputBuffer = new IOBuffer(26, IOBufferAccess.ReadWrite, true);
 var random = new LcgRandom(111);
-var neuronCount = 5_000;
+var neuronCount = 2_644;
 
 var network = new Network(
     neuronCount: neuronCount,
@@ -30,7 +30,7 @@ while (true)
 {
     Parallel.ForEach(top100Networks, (network) =>
     {
-        network.Key.Simulate(1_000_000_000, 1_000_000);
+        network.Key.Simulate(1_000_000_000, 5_000_000);
         var outputBuffer = network.Key.IOBuffers.First(x => x.Access == IOBufferAccess.ReadWrite);
         var inputBuffer = network.Key.IOBuffers.First(x => x.Access == IOBufferAccess.Read);
         var output = network.Key.IOBuffers.First(x => x.Access == IOBufferAccess.ReadWrite).Buffer;
@@ -40,11 +40,18 @@ while (true)
         var rcr = inputBuffer.ReadCoverageRatio();
         var wcr = outputBuffer.WriteCoverageRatio();
 
-        top100Networks[network.Key] =
-            1_000_000 - (int)(1_000_000 * wcr) +
-            1_000_000_000 - (int)(1_000_000_000 * rcr);
-
-        top100Networks[network.Key] += outputMSE + outputLev;
+        if (rcr < 1.0f)
+        {
+            top100Networks[network.Key] = 1_000_000_000 - (int)(1_000_000_000 * rcr);
+        }
+        else if (wcr < 1.0f)
+        {
+            top100Networks[network.Key] = 1_000_000 - (int)(1_000_000 * wcr);
+        }
+        else
+        {
+            top100Networks[network.Key] += outputMSE + outputLev;
+        }
     });
 
     var top10 = top100Networks.OrderBy(x => x.Value).Take(10).ToList();
@@ -57,12 +64,12 @@ while (true)
         var existing = new Network(n.Key);
         top100Networks[existing] = double.MaxValue;
 
-        for(int x = 0; x < 100; x++)
+        for(int x = 0; x < 10; x++)
         {
             var clone = new Network(n.Key);
             clone.Mutate();
 
-            if (x < 50)
+            if (x < 5)
             {
                 for (int y = 0; y < x; y++)
                 {
