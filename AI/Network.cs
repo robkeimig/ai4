@@ -17,7 +17,7 @@ internal class Network
         List<IOBuffer> ioBuffers,
         int maxConnectivityDelayTicks = 10_000,
         int minConnectivityDelayTicks = 100,
-        int spikeInjectionIntervalTicks = 100,
+        int spikeInjectionIntervalTicks = 1000,
         long randomSeed = 123)
     {
         _maxConnectivityDelayTicks = maxConnectivityDelayTicks;

@@ -4,9 +4,10 @@ using System.Text;
 
 var outputBuffer = new IOBuffer(26, IOBufferAccess.ReadWrite, true);
 var random = new LcgRandom(111);
+var neuronCount = 5_000;
 
 var network = new Network(
-    neuronCount: 10_000,
+    neuronCount: neuronCount,
     ioBuffers: new List<IOBuffer>
     {
         new IOBuffer("Hello! Can you respond with 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' please?", IOBufferAccess.Read, false),
@@ -29,7 +30,7 @@ while (true)
 {
     Parallel.ForEach(top100Networks, (network) =>
     {
-        network.Key.Simulate(1_000_000_000, 2_000_000);
+        network.Key.Simulate(1_000_000_000, 1_000_000);
         var outputBuffer = network.Key.IOBuffers.First(x => x.Access == IOBufferAccess.ReadWrite);
         var inputBuffer = network.Key.IOBuffers.First(x => x.Access == IOBufferAccess.Read);
         var output = network.Key.IOBuffers.First(x => x.Access == IOBufferAccess.ReadWrite).Buffer;
@@ -56,43 +57,21 @@ while (true)
         var existing = new Network(n.Key);
         top100Networks[existing] = double.MaxValue;
 
-        for(int x = 0; x < 10; x++)
+        for(int x = 0; x < 100; x++)
         {
             var clone = new Network(n.Key);
             clone.Mutate();
 
-            for (int y = 0; y < x; y++)
+            if (x < 50)
             {
-                clone.Mutate();
-            }
-
-            if (x == 6)
-            {
-                for (int y = 0; y < 500; y++)
+                for (int y = 0; y < x; y++)
                 {
                     clone.Mutate();
                 }
             }
-
-            if (x == 7)
+            else
             {
-                for (int y = 0; y < 1_250; y++)
-                {
-                    clone.Mutate();
-                }
-            }
-
-            if (x == 8)
-            {
-                for (int y = 0; y < 2_500; y++)
-                {
-                    clone.Mutate();
-                }
-            }
-
-            if (x == 9)
-            {
-                for (int y = 0; y < 5_000; y++)
+                for (int y = 0; y < neuronCount / 10; y++)
                 {
                     clone.Mutate();
                 }
