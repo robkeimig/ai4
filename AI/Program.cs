@@ -54,7 +54,7 @@ while (true)
         }
         else
         {
-            top100Networks[network.Key] += outputMSE + outputLev;            
+            top100Networks[network.Key] = outputMSE + outputLev;            
         }
     });
 
