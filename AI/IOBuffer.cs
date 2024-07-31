@@ -2,6 +2,9 @@
 
 namespace AI;
 
+//TODO: Log time of completing all reads. Log time of starting first write.
+//At scoring time, determine if we started writing before we read everything.
+//If we violate this rule, add a large penalty scaling with the tick overlap.
 public class IOBuffer
 {
     readonly byte[] _buffer;
