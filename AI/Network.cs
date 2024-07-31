@@ -16,8 +16,8 @@ internal class Network
         long neuronCount,
         List<IOBuffer> ioBuffers,
         int maxConnectivityDelayTicks = 10_000,
-        int minConnectivityDelayTicks = 10,
-        int spikeInjectionIntervalTicks = 10,
+        int minConnectivityDelayTicks = 100,
+        int spikeInjectionIntervalTicks = 100,
         long randomSeed = 123)
     {
         _maxConnectivityDelayTicks = maxConnectivityDelayTicks;
@@ -298,23 +298,22 @@ internal class Network
         return $@"{inhibPercent} : {exitPercent}";
     }
 
-    public void Simulate(long timeLimitTicks)
+    public void Simulate(long timeLimit, long spikeLimit)
     {
         var spikeQueue = new PriorityQueue<Spike, long>();
+        long t = 0;
 
-        for (long t = 0; t < timeLimitTicks; t++)
+        while (_totalEnqueuedSpikes < spikeLimit && t < timeLimit)
         {
             //if (t % 100_000 == 0)
             //{
             //    Console.WriteLine($"Network Simulating t = {t}; Queue = {spikeQueue.Count}");
             //}
 
-            //Process items from the priority queue until either:
-            //1. It is empty.
-            //2. The minimal priority is after the current tick.
             while (spikeQueue.TryPeek(out Spike spike, out long priority))
             {
                 //Console.WriteLine(t + " " + spikeQueue.Count + " " + spike.Target);
+                
                 if (priority <= t)
                 {
                     spikeQueue.Dequeue();
@@ -332,11 +331,14 @@ internal class Network
                 _totalEnqueuedSpikes++;
                 spikeQueue.Enqueue(new Spike
                 {
-                    Charge = 0xFF,
+                    Charge = 1.0f,
+                    //Charge = 0xFF,
                     ArrivalTime = t,
                     Target = _energyInjectionNeuron
                 }, t);
             }
+
+            t++;
         }
     }
 
