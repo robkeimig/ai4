@@ -20,7 +20,7 @@ Console.WriteLine(network.Statistics());
 var top100Networks = new Dictionary<Network, double>();
 var expectedOutput = Encoding.UTF8.GetBytes("ABCDEFGHIJKLMNOPQRSTUVWXYZ");
 
-for (int x = 0; x < 10; x++)
+for (int x = 0; x < 50; x++)
 {
     var clone = new Network(network);
     clone.Mutate();
@@ -70,11 +70,11 @@ while (true)
 
     if (stuckCount > 4)
     {
-        top10 = top100Networks.OrderBy(x => x.Value).Where(x=>x.Value < double.MaxValue).TakeLast(10).ToList();
+        top10 = top100Networks.OrderBy(x => x.Value).Where(x=>x.Value < double.MaxValue).TakeLast(50).ToList();
     }
     else
     {
-        top10 = top100Networks.OrderBy(x => x.Value).Take(10).ToList();
+        top10 = top100Networks.OrderBy(x => x.Value).Take(50).ToList();
     }
     
     var bestOutput = top10[0].Key.IOBuffers.First(x => x.Access == IOBufferAccess.ReadWrite).Buffer;
@@ -98,7 +98,7 @@ while (true)
         var existing = new Network(n.Key);
         top100Networks[existing] = double.MaxValue;
 
-        for(int x = 0; x < 20; x++)
+        for(int x = 0; x < 5; x++)
         {
             var clone = new Network(n.Key);
 
@@ -109,7 +109,7 @@ while (true)
             
             if (x == 0)
             {
-                for (int y = 0; y < neuronCount / 10; y++)
+                for (int y = 0; y < neuronCount / 20; y++)
                 {
                     clone.Mutate();
                 }
