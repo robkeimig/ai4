@@ -42,7 +42,7 @@ while (true)
 
     Parallel.ForEach(top100Networks, (network) =>
     {
-        network.Key.Simulate(1_000_000_000, 10_000 + Math.Clamp(booster, 0, 100) * 10_000);
+        network.Key.Simulate(1_000_000_000, 10_000 + Math.Clamp(booster, 0, 100) * 1_000);
         var outputBuffer = network.Key.IOBuffers.First(x => x.Access == IOBufferAccess.ReadWrite);
         var inputBuffer = network.Key.IOBuffers.First(x => x.Access == IOBufferAccess.Read);
         var output = network.Key.IOBuffers.First(x => x.Access == IOBufferAccess.ReadWrite).Buffer;
@@ -92,7 +92,7 @@ while (true)
 
     List<KeyValuePair<Network, double>> top10;
 
-    if (stuckCount > 6)
+    if (stuckCount > 11)
     {
         booster++;
         Console.WriteLine($@"We got stuck. Starting over with a low-end candidate. Current booster: {booster}");
