@@ -5,7 +5,7 @@ using System.Xml;
 
 var outputBuffer = new IOBuffer(26, IOBufferAccess.ReadWrite, true);
 var random = new LcgRandom(111);
-var neuronCount = 706;
+var neuronCount = 1111;
 
 var network = new Network(
     neuronCount: neuronCount,
@@ -61,7 +61,6 @@ while (true)
         else if (rcr < 1.0f)
         {
             bootstrapping = false;
-            Console.WriteLine("Bootstrapping mode is now off - inhibitory neurons will receive weight updates");
             network.Key.Note = "IO: Read constrained";
             top100Networks[network.Key] = 100_000_000 - (int)(100_000_000 * rcr) + 10_000_000;
         }
