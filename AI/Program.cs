@@ -55,7 +55,7 @@ while (true)
         if (network.Key.SpikedPercentage < 0.95f && activityBootstrapped == false)
         {
             network.Key.Note = "Activity Bootstrapping (95%)";
-            top100Networks[network.Key] = 1_000_000_000 - (int)(1_000_000_000 * (network.Key.SpikedPercentage));
+            top100Networks[network.Key] = 1_000_000_000 - (int)(1_000_000_000 * (network.Key.SpikedPercentage)) + 1_000_000_000;
         }
         else if (rcr < 1.0f)
         {
