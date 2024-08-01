@@ -4,7 +4,6 @@ internal class Network
 {
     readonly int _maxConnectivityDelayTicks;
     readonly int _minConnectivityDelayTicks;
-    readonly int _spikeInjectionIntervalTicks;
     readonly Neuron _energyInjectionNeuron;
     readonly Neuron[] _neurons;
     readonly List<IOBuffer> _ioBuffers;
@@ -19,12 +18,10 @@ internal class Network
         List<IOBuffer> ioBuffers,
         int maxConnectivityDelayTicks = 1_000,
         int minConnectivityDelayTicks = 10,
-        int spikeInjectionIntervalTicks = 10_000,
         long randomSeed = 123)
     {
         _maxConnectivityDelayTicks = maxConnectivityDelayTicks;
         _minConnectivityDelayTicks = minConnectivityDelayTicks;
-        _spikeInjectionIntervalTicks = spikeInjectionIntervalTicks;
         _random = new LcgRandom(randomSeed);
         _ioBuffers = new List<IOBuffer>();
         _ioBufferExclusions = new List<int>();
@@ -200,7 +197,6 @@ internal class Network
         _ioBufferExclusions = new List<int>();
         _maxConnectivityDelayTicks = parent._maxConnectivityDelayTicks;
         _minConnectivityDelayTicks = parent._minConnectivityDelayTicks;
-        _spikeInjectionIntervalTicks = parent._spikeInjectionIntervalTicks;
         _random = parent._random;
 
         var neuronCloneMap = new Dictionary<Neuron, Neuron>();
@@ -305,6 +301,18 @@ internal class Network
         var spikeQueue = new PriorityQueue<Spike, long>();
         long t = 0;
 
+        //Inject bootstrapping energy into the network
+        for(int x = 0; x < _neurons.Count(); x++)
+        {
+            spikeQueue.Enqueue(new Spike
+            {
+                Charge = 1.0f,
+                //Charge = 0xFF,
+                ArrivalTime = x,
+                Target = _energyInjectionNeuron
+            }, t);
+        }
+
         while (_totalEnqueuedSpikes < spikeLimit && t < timeLimit)
         {
             //if (t % 100_000 == 0)
@@ -327,18 +335,7 @@ internal class Network
                 }
             }
 
-            //Inject random energy into the network
-            if (t % _spikeInjectionIntervalTicks == 0)
-            {
-                _totalEnqueuedSpikes++;
-                spikeQueue.Enqueue(new Spike
-                {
-                    Charge = 1.0f,
-                    //Charge = 0xFF,
-                    ArrivalTime = t,
-                    Target = _energyInjectionNeuron
-                }, t);
-            }
+            
 
             t++;
 
