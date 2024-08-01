@@ -42,7 +42,7 @@ while (true)
 
     Parallel.ForEach(top100Networks, (network) =>
     {
-        network.Key.Simulate(1_000_000_000, 10_000 + Math.Clamp(booster, 0, 100) * 1_000);
+        network.Key.Simulate(1_000_000_000, 10_000 + Math.Clamp(booster, 0, 1000) * 100);
         var outputBuffer = network.Key.IOBuffers.First(x => x.Access == IOBufferAccess.ReadWrite);
         var inputBuffer = network.Key.IOBuffers.First(x => x.Access == IOBufferAccess.Read);
         var output = network.Key.IOBuffers.First(x => x.Access == IOBufferAccess.ReadWrite).Buffer;
