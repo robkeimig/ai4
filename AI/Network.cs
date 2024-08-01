@@ -33,7 +33,7 @@ internal class Network
             var neuron = new Neuron
             {
                 Inputs = new List<Neuron>(),
-                Type = (_random.NextInt32(0, 100) < 20) ? NeuronType.Inhibitory : NeuronType.Excitatory,
+                Type = (_random.NextInt32(0, 100) < 5) ? NeuronType.Inhibitory : NeuronType.Excitatory,
             };
 
             neurons[x] = neuron;
@@ -302,7 +302,7 @@ internal class Network
         long t = 0;
 
         //Inject bootstrapping energy into the network
-        for(int x = 0; x < _neurons.Count(); x++)
+        for(int x = 0; x < _neurons.Count()/10; x++)
         {
             spikeQueue.Enqueue(new Spike
             {
