@@ -5,7 +5,7 @@ using System.Xml;
 
 var outputBuffer = new IOBuffer(26, IOBufferAccess.ReadWrite, true);
 var random = new LcgRandom(111);
-var neuronCount = 2131;
+var neuronCount = 1098;
 
 var network = new Network(
     neuronCount: neuronCount,
@@ -42,7 +42,7 @@ while (true)
 
     Parallel.ForEach(top100Networks, (network) =>
     {
-        network.Key.Simulate(1_000_000_000, 10_000 + Math.Clamp(booster, 0, 100)*Math.Clamp(generation, 0, 1000));
+        network.Key.Simulate(1_000_000_000, 10_000 + Math.Clamp(booster, 0, 100) * 10_000);
         var outputBuffer = network.Key.IOBuffers.First(x => x.Access == IOBufferAccess.ReadWrite);
         var inputBuffer = network.Key.IOBuffers.First(x => x.Access == IOBufferAccess.Read);
         var output = network.Key.IOBuffers.First(x => x.Access == IOBufferAccess.ReadWrite).Buffer;
@@ -52,9 +52,9 @@ while (true)
         var rcr = inputBuffer.ReadCoverageRatio();
         var wcr = outputBuffer.WriteCoverageRatio();
 
-        if (network.Key.SpikedPercentage < 0.95f && activityBootstrapped == false)
+        if (network.Key.SpikedPercentage < 0.80f && activityBootstrapped == false)
         {
-            network.Key.Note = "Activity Bootstrapping (95%)";
+            network.Key.Note = "Activity Bootstrapping (80%)";
             top100Networks[network.Key] = 1_000_000_000 - (int)(1_000_000_000 * (network.Key.SpikedPercentage)) + 1_000_000_000;
         }
         else if (rcr < 1.0f)
@@ -96,11 +96,11 @@ while (true)
     {
         booster++;
         Console.WriteLine($@"We got stuck. Starting over with a low-end candidate. Current booster: {booster}");
-        top10 = top100Networks.OrderBy(x => x.Value).Where(x=>x.Value < double.MaxValue).TakeLast(50).ToList();
+        top10 = top100Networks.OrderBy(x => x.Value).Where(x=>x.Value < double.MaxValue).TakeLast(10).ToList();
     }
     else
     {
-        top10 = top100Networks.OrderBy(x => x.Value).Take(50).ToList();
+        top10 = top100Networks.OrderBy(x => x.Value).Take(10).ToList();
     }
     
     var bestOutput = top10[0].Key.IOBuffers.First(x => x.Access == IOBufferAccess.ReadWrite).Buffer;
