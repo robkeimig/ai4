@@ -92,7 +92,7 @@ while (true)
 
     List<KeyValuePair<Network, double>> top10;
 
-    if (stuckCount > 11)
+    if (stuckCount > 20)
     {
         booster++;
         Console.WriteLine($@"We got stuck. Starting over with a low-end candidate. Current booster: {booster}");
