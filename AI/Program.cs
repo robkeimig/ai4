@@ -5,7 +5,7 @@ using System.Xml;
 
 var outputBuffer = new IOBuffer(26, IOBufferAccess.ReadWrite, true);
 var random = new LcgRandom(111);
-var neuronCount = 5698;
+var neuronCount = 706;
 
 var network = new Network(
     neuronCount: neuronCount,
@@ -23,7 +23,7 @@ var expectedOutput = Encoding.UTF8.GetBytes("ABCDEFGHIJKLMNOPQRSTUVWXYZ");
 for (int x = 0; x < 50; x++)
 {
     var clone = new Network(network);
-    clone.Mutate();
+    clone.Mutate(true);
     top100Networks.Add(clone, double.MaxValue);
 }
 
@@ -35,6 +35,7 @@ bool scoreBooster1 = false;
 bool scoreBooster2 = false;
 int generation = 0;
 int booster = 0;
+bool bootstrapping = true;
 
 while (true)
 {
@@ -59,13 +60,10 @@ while (true)
         }
         else if (rcr < 1.0f)
         {
+            bootstrapping = false;
+            Console.WriteLine("Bootstrapping mode is now off - inhibitory neurons will receive weight updates");
             network.Key.Note = "IO: Read constrained";
             top100Networks[network.Key] = 100_000_000 - (int)(100_000_000 * rcr) + 10_000_000;
-
-            if (rcr > 0.5f)
-            {
-                scoreBooster1 = true;
-            }
         }
         else if (inputBuffer.FinalReadTick > outputBuffer.FirstWriteTick)
         {
@@ -92,7 +90,7 @@ while (true)
 
     List<KeyValuePair<Network, double>> top10;
 
-    if (stuckCount > 20)
+    if (stuckCount > 5)
     {
         booster++;
         Console.WriteLine($@"We got stuck. Starting over with a low-end candidate. Current booster: {booster}");
@@ -130,14 +128,14 @@ while (true)
 
             for (int y = 0; y < x; y++)
             {
-                clone.Mutate();
+                clone.Mutate(bootstrapping);
             }
             
             if (x == 0)
             {
                 for (int y = 0; y < neuronCount / 10; y++)
                 {
-                    clone.Mutate();
+                    clone.Mutate(bootstrapping);
                 }
             }
 

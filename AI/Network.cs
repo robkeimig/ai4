@@ -33,7 +33,7 @@ internal class Network
             var neuron = new Neuron
             {
                 Inputs = new List<Neuron>(),
-                Type = (_random.NextInt32(0, 100) < 10) ? NeuronType.Inhibitory : NeuronType.Excitatory,
+                Type = (_random.NextInt32(0, 100) < 20) ? NeuronType.Inhibitory : NeuronType.Excitatory,
             };
 
             neurons[x] = neuron;
@@ -64,9 +64,19 @@ internal class Network
             neuron.Output2Delay = _random.NextInt32(_minConnectivityDelayTicks, _maxConnectivityDelayTicks);
 
             //Initialize weights randomly. These are what we will be training.
-            neuron.Output0Weight = _random.NextDouble();
-            neuron.Output1Weight = _random.NextDouble();
-            neuron.Output2Weight = _random.NextDouble();
+            if (neuron.Type == NeuronType.Excitatory)
+            {
+                neuron.Output0Weight = _random.NextDouble();
+                neuron.Output1Weight = _random.NextDouble();
+                neuron.Output2Weight = _random.NextDouble();
+            }
+            else
+            {
+                neuron.Output0Weight = 0;
+                neuron.Output1Weight = 0;
+                neuron.Output2Weight = 0;
+            }
+            
 
             //Add backreferences to the current neuron to the downstream peers we established above.
             neuron.Output0.Inputs.Add(neuron);
@@ -570,11 +580,16 @@ internal class Network
         &&  x.Output2 != null 
         &&  x.IOBuffer == null);
 
-    internal void Mutate()
+    internal void Mutate(bool bootstrapping)
     {
         var neuronIndex = _random.NextInt32(0, _neurons.Count(), _ioBufferExclusions);
         var outputIndex = _random.Next(0, 2);
         var neuron = _neurons[neuronIndex];
+
+        if (neuron.Type == NeuronType.Inhibitory && bootstrapping)
+        {
+            return;
+        }
 
         if (outputIndex == 0 && neuron.Output0Weight.HasValue)
         {
