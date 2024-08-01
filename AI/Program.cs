@@ -5,7 +5,7 @@ using System.Xml;
 
 var outputBuffer = new IOBuffer(26, IOBufferAccess.ReadWrite, true);
 var random = new LcgRandom(111);
-var neuronCount = 564;
+var neuronCount = 1564;
 
 var network = new Network(
     neuronCount: neuronCount,
