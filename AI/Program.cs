@@ -5,7 +5,7 @@ using System.Xml;
 
 var outputBuffer = new IOBuffer(26, IOBufferAccess.ReadWrite, true);
 var random = new LcgRandom(111);
-var neuronCount = 1180;
+var neuronCount = 501;
 
 var network = new Network(
     neuronCount: neuronCount,
@@ -29,12 +29,13 @@ for (int x = 0; x < 50; x++)
 
 double lastScore = double.MaxValue;
 var stuckCount = 0;
+bool activityBootstrapped = false;
 
 while (true)
 {
     Parallel.ForEach(top100Networks, (network) =>
     {
-        network.Key.Simulate(1_000_000_000, 1_500_000);
+        network.Key.Simulate(1_000_000_000, 1_000_000);
         var outputBuffer = network.Key.IOBuffers.First(x => x.Access == IOBufferAccess.ReadWrite);
         var inputBuffer = network.Key.IOBuffers.First(x => x.Access == IOBufferAccess.Read);
         var output = network.Key.IOBuffers.First(x => x.Access == IOBufferAccess.ReadWrite).Buffer;
@@ -44,16 +45,27 @@ while (true)
         var rcr = inputBuffer.ReadCoverageRatio();
         var wcr = outputBuffer.WriteCoverageRatio();
 
-        if (rcr < 1.0f)
+        if (network.Key.SpikedPercentage < 0.80f && activityBootstrapped == false)
+        {
+            network.Key.Note = "Activity Bootstrapping (80%)";
+            top100Networks[network.Key] = 1_000_000_000 - (int)(1_000_000_000 * (network.Key.SpikedPercentage));
+        }
+        else if (rcr < 1.0f)
         {
             network.Key.Note = "IO: Read constrained";
-            top100Networks[network.Key] = 1_000_000_000 - (int)(1_000_000_000 * rcr);
+            top100Networks[network.Key] = 100_000_000 - (int)(100_000_000 * rcr) + 10_000_000;
         }
         else if (inputBuffer.FinalReadTick > outputBuffer.FirstWriteTick)
         {
+            activityBootstrapped = true;
             network.Key.Note = "IO: Write before Read constrained";
             top100Networks[network.Key] = 1_000_000 * ((double)inputBuffer.FinalReadTick.Value / outputBuffer.FirstWriteTick.Value);
         }
+        //else if (outputBuffer.FirstWriteTick == null)
+        //{
+        //    network.Key.Note = "IO: Write before Read constrained (no write yet)";
+        //    top100Networks[network.Key] = 10_000_000;
+        //}
         else if (wcr < 1.0f)
         {
             network.Key.Note = "IO: Write constrained";
@@ -79,7 +91,7 @@ while (true)
     
     var bestOutput = top10[0].Key.IOBuffers.First(x => x.Access == IOBufferAccess.ReadWrite).Buffer;
 
-    Console.WriteLine("Best Score - " + top10[0].Value  + " - " + top10[0].Key.Note + " - " + Encoding.UTF8.GetString(bestOutput));
+    Console.WriteLine("Best Score - " + top10[0].Value  + " - " + top10[0].Key.Note + " - " + top10[0].Key.SpikedPercentage +" - " + Encoding.UTF8.GetString(bestOutput));
 
     if (top10[0].Value == lastScore)
     {
@@ -98,7 +110,7 @@ while (true)
         var existing = new Network(n.Key);
         top100Networks[existing] = double.MaxValue;
 
-        for(int x = 0; x < 5 * (stuckCount + 1); x++)
+        for(int x = 0; x < 5 /** (stuckCount + 1)*/; x++)
         {
             var clone = new Network(n.Key);
 
@@ -119,7 +131,3 @@ while (true)
         }
     }
 }
-
-//    network.Simulate(10_000_000);
-//Console.WriteLine(network.TotalSpikes);
-//Console.WriteLine(network.SpikedPercentage);
