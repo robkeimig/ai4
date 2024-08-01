@@ -12,12 +12,14 @@ internal class Network
     readonly List<int> _ioBufferExclusions;
     long _totalEnqueuedSpikes;
 
+    public string Note { get; set; }
+
     public Network(
         long neuronCount,
         List<IOBuffer> ioBuffers,
         int maxConnectivityDelayTicks = 10_000,
         int minConnectivityDelayTicks = 100,
-        int spikeInjectionIntervalTicks = 1000,
+        int spikeInjectionIntervalTicks = 10000,
         long randomSeed = 123)
     {
         _maxConnectivityDelayTicks = maxConnectivityDelayTicks;
@@ -427,7 +429,7 @@ internal class Network
                     if (readOutputNeuron.Output0 is not null)
                     {
                         var arrivalTime = tick + readOutputNeuron.Output0Delay.Value;
-                        var arrivalTimeDelta = tick + readOutputNeuron.Output0Delay.Value + spikeTarget.IOBuffer.ReadCursor().Value;
+                        var arrivalTimeDelta = tick + readOutputNeuron.Output0Delay.Value + spikeTarget.IOBuffer.ReadCursor(tick).Value;
 
                         spikeQueue.Enqueue(new Spike
                         {
@@ -451,7 +453,7 @@ internal class Network
                     if (readOutputNeuron.Output1 is not null)
                     {
                         var arrivalTime = tick + readOutputNeuron.Output1Delay.Value;
-                        var arrivalTimeDelta = tick + readOutputNeuron.Output1Delay.Value + spikeTarget.IOBuffer.ReadCursor().Value;
+                        var arrivalTimeDelta = tick + readOutputNeuron.Output1Delay.Value + spikeTarget.IOBuffer.ReadCursor(tick).Value;
 
                         spikeQueue.Enqueue(new Spike
                         {
@@ -475,7 +477,7 @@ internal class Network
                     if (readOutputNeuron.Output2 is not null)
                     {
                         var arrivalTime = tick + readOutputNeuron.Output2Delay.Value;
-                        var arrivalTimeDelta = tick + readOutputNeuron.Output2Delay.Value + spikeTarget.IOBuffer.ReadCursor().Value;
+                        var arrivalTimeDelta = tick + readOutputNeuron.Output2Delay.Value + spikeTarget.IOBuffer.ReadCursor(tick).Value;
 
                         spikeQueue.Enqueue(new Spike
                         {
@@ -503,7 +505,7 @@ internal class Network
                     var writeInputBNeuron = spikeTarget.IOBuffer.AssignedNeurons.First(x => x.IOBufferRole == IOBufferRole.CursorWriteInputB);
                     var tickDelta = Math.Abs(writeInputANeuron.LastSpikeTime - writeInputBNeuron.LastSpikeTime);
                     var value = (byte)(tickDelta % 255);
-                    spikeTarget.IOBuffer.WriteCursor(value);
+                    spikeTarget.IOBuffer.WriteCursor(tick, value);
                     break;
             }
         }

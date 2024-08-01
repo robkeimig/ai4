@@ -13,6 +13,9 @@ public class IOBuffer
     readonly List<Neuron> _assignedNeurons;
     readonly int[] _bufferReadCount;
     readonly int[] _bufferWriteCount;
+    long? _bufferFirstReadTick;
+    long? _bufferFirstWriteTick;
+    long? _bufferFinalByteReadTick;
     int _cursor = 0;
 
     public IOBuffer(int size, IOBufferAccess access, bool clearUponClone) 
@@ -82,6 +85,10 @@ public class IOBuffer
 
     public List<Neuron> AssignedNeurons => _assignedNeurons;
 
+    public long? FirstWriteTick => _bufferFirstWriteTick;
+    public long? FirstReadTick => _bufferFirstReadTick;
+    public long? FinalReadTick => _bufferFinalByteReadTick;
+
     public void Clear()
     {
         Array.Clear(_buffer);
@@ -109,19 +116,35 @@ public class IOBuffer
         return false;
     }
 
-    public byte? ReadCursor()
+    public byte? ReadCursor(long t)
     {
         //Console.WriteLine($"Reading Buffer [{_cursor}]: {_buffer[_cursor]}");
         if (_access == IOBufferAccess.Write) { return null; }
         _bufferReadCount[_cursor]++;
+
+        if (_bufferFirstReadTick == null)
+        {
+            _bufferFirstReadTick = t; 
+        }
+        else if (_bufferFinalByteReadTick == null && _bufferReadCount.All(x => x > 0))
+        {
+            _bufferFinalByteReadTick = t;
+        }
+
         return _buffer[_cursor];
     }
 
-    public void WriteCursor(byte value)
+    public void WriteCursor(long t, byte value)
     {
         //Console.WriteLine($"Writing Buffer [{_cursor}]: {value}");
         if (_access == IOBufferAccess.Read) { return; }
         _bufferWriteCount[_cursor]++;
+
+        if (_bufferFirstWriteTick == null)
+        {
+            _bufferFirstWriteTick = t;
+        }
+
         _buffer[_cursor] = value;
     }
 }

@@ -5,7 +5,7 @@ using System.Xml;
 
 var outputBuffer = new IOBuffer(26, IOBufferAccess.ReadWrite, true);
 var random = new LcgRandom(111);
-var neuronCount = 6_000;
+var neuronCount = 6000;
 
 var network = new Network(
     neuronCount: neuronCount,
@@ -46,7 +46,14 @@ while (true)
 
         if (rcr < 1.0f)
         {
+            network.Key.Note = "IO: Read constrained";
             top100Networks[network.Key] = 1_000_000_000 - (int)(1_000_000_000 * rcr);
+        }
+        else if (inputBuffer.FinalReadTick > outputBuffer.FirstWriteTick)
+        {
+            network.Key.Note = "IO: Write before Read constrained";
+            //If we've begun writing output before completing reading of our instructions, penalize.
+            top100Networks[network.Key] = 1_000_000 * ((double)inputBuffer.FinalReadTick.Value / outputBuffer.FirstWriteTick.Value);
         }
         //TODO: Ensure all input read BEFORE first output write.
         //Penalize depending on how many ticks we violated by.
@@ -54,17 +61,19 @@ while (true)
         //This rule follows after RCR and before WCR.
         else if (wcr < 1.0f)
         {
+            network.Key.Note = "IO: Write constrained";
             top100Networks[network.Key] = 1_000_000 - (int)(1_000_000 * wcr);
         }
         else
         {
+            network.Key.Note = "Correctness";
             top100Networks[network.Key] = outputMSE + outputLev;            
         }
     });
 
     List<KeyValuePair<Network, double>> top10;
 
-    if (stuckCount > 9)
+    if (stuckCount > 4)
     {
         top10 = top100Networks.OrderBy(x => x.Value).Where(x=>x.Value < double.MaxValue).TakeLast(10).ToList();
     }
@@ -74,7 +83,8 @@ while (true)
     }
     
     var bestOutput = top10[0].Key.IOBuffers.First(x => x.Access == IOBufferAccess.ReadWrite).Buffer;
-    Console.WriteLine("Best Score: " + top10[0].Value + " - " + Encoding.UTF8.GetString(bestOutput));
+
+    Console.WriteLine("Best Score: " + top10[0].Value + " - " + Encoding.UTF8.GetString(bestOutput) + " - " + top10[0].Key.Note);
 
     if (top10[0].Value == lastScore)
     {
