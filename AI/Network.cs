@@ -19,7 +19,7 @@ internal class Network
         List<IOBuffer> ioBuffers,
         int maxConnectivityDelayTicks = 1_000,
         int minConnectivityDelayTicks = 10,
-        int spikeInjectionIntervalTicks = 100_000,
+        int spikeInjectionIntervalTicks = 10_000,
         long randomSeed = 123)
     {
         _maxConnectivityDelayTicks = maxConnectivityDelayTicks;
@@ -341,6 +341,11 @@ internal class Network
             }
 
             t++;
+
+            if (t > 10_000_000 && spikeQueue.Count == 0)
+            {
+                break;
+            }
         }
     }
 

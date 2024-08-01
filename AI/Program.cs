@@ -5,7 +5,7 @@ using System.Xml;
 
 var outputBuffer = new IOBuffer(26, IOBufferAccess.ReadWrite, true);
 var random = new LcgRandom(111);
-var neuronCount = 12000;
+var neuronCount = 1000;
 
 var network = new Network(
     neuronCount: neuronCount,
@@ -98,7 +98,7 @@ while (true)
         var existing = new Network(n.Key);
         top100Networks[existing] = double.MaxValue;
 
-        for(int x = 0; x < 25; x++)
+        for(int x = 0; x < 5 * (stuckCount + 1); x++)
         {
             var clone = new Network(n.Key);
 
