@@ -5,7 +5,7 @@ using System.Xml;
 
 var outputBuffer = new IOBuffer(26, IOBufferAccess.ReadWrite, true);
 var random = new LcgRandom(111);
-var neuronCount = 6000;
+var neuronCount = 12000;
 
 var network = new Network(
     neuronCount: neuronCount,
@@ -34,7 +34,7 @@ while (true)
 {
     Parallel.ForEach(top100Networks, (network) =>
     {
-        network.Key.Simulate(1_000_000_000, 1_000_000);
+        network.Key.Simulate(1_000_000_000, 2_000_000);
         var outputBuffer = network.Key.IOBuffers.First(x => x.Access == IOBufferAccess.ReadWrite);
         var inputBuffer = network.Key.IOBuffers.First(x => x.Access == IOBufferAccess.Read);
         var output = network.Key.IOBuffers.First(x => x.Access == IOBufferAccess.ReadWrite).Buffer;
@@ -98,7 +98,7 @@ while (true)
         var existing = new Network(n.Key);
         top100Networks[existing] = double.MaxValue;
 
-        for(int x = 0; x < 5; x++)
+        for(int x = 0; x < 25; x++)
         {
             var clone = new Network(n.Key);
 

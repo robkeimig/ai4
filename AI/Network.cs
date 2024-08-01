@@ -17,9 +17,9 @@ internal class Network
     public Network(
         long neuronCount,
         List<IOBuffer> ioBuffers,
-        int maxConnectivityDelayTicks = 10_000,
-        int minConnectivityDelayTicks = 100,
-        int spikeInjectionIntervalTicks = 10000,
+        int maxConnectivityDelayTicks = 1_000,
+        int minConnectivityDelayTicks = 10,
+        int spikeInjectionIntervalTicks = 100_000,
         long randomSeed = 123)
     {
         _maxConnectivityDelayTicks = maxConnectivityDelayTicks;
