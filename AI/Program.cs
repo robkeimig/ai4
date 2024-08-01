@@ -52,13 +52,8 @@ while (true)
         else if (inputBuffer.FinalReadTick > outputBuffer.FirstWriteTick)
         {
             network.Key.Note = "IO: Write before Read constrained";
-            //If we've begun writing output before completing reading of our instructions, penalize.
             top100Networks[network.Key] = 1_000_000 * ((double)inputBuffer.FinalReadTick.Value / outputBuffer.FirstWriteTick.Value);
         }
-        //TODO: Ensure all input read BEFORE first output write.
-        //Penalize depending on how many ticks we violated by.
-        //Penalize also off a base "thinking time" scalar.
-        //This rule follows after RCR and before WCR.
         else if (wcr < 1.0f)
         {
             network.Key.Note = "IO: Write constrained";
@@ -84,7 +79,7 @@ while (true)
     
     var bestOutput = top10[0].Key.IOBuffers.First(x => x.Access == IOBufferAccess.ReadWrite).Buffer;
 
-    Console.WriteLine("Best Score: " + top10[0].Value + " - " + Encoding.UTF8.GetString(bestOutput) + " - " + top10[0].Key.Note);
+    Console.WriteLine("Best Score - " + top10[0].Value  + " - " + top10[0].Key.Note + " - " + Encoding.UTF8.GetString(bestOutput));
 
     if (top10[0].Value == lastScore)
     {
