@@ -5,7 +5,7 @@ using System.Xml;
 
 var outputBuffer = new IOBuffer(26, IOBufferAccess.ReadWrite, true);
 var random = new LcgRandom(111);
-var neuronCount = 5000;
+var neuronCount = 1764;
 
 var network = new Network(
     neuronCount: neuronCount,
@@ -31,11 +31,18 @@ double lastScore = double.MaxValue;
 var stuckCount = 0;
 bool activityBootstrapped = false;
 
+bool scoreBooster1 = false;
+bool scoreBooster2 = false;
+int generation = 0;
+int booster = 0;
+
 while (true)
 {
+    generation++;
+
     Parallel.ForEach(top100Networks, (network) =>
     {
-        network.Key.Simulate(1_000_000_000, 250_000);
+        network.Key.Simulate(1_000_000_000, 25_000 + booster*100);
         var outputBuffer = network.Key.IOBuffers.First(x => x.Access == IOBufferAccess.ReadWrite);
         var inputBuffer = network.Key.IOBuffers.First(x => x.Access == IOBufferAccess.Read);
         var output = network.Key.IOBuffers.First(x => x.Access == IOBufferAccess.ReadWrite).Buffer;
@@ -54,6 +61,11 @@ while (true)
         {
             network.Key.Note = "IO: Read constrained";
             top100Networks[network.Key] = 100_000_000 - (int)(100_000_000 * rcr) + 10_000_000;
+
+            if (rcr > 0.5f)
+            {
+                scoreBooster1 = true;
+            }
         }
         else if (inputBuffer.FinalReadTick > outputBuffer.FirstWriteTick)
         {
@@ -80,8 +92,10 @@ while (true)
 
     List<KeyValuePair<Network, double>> top10;
 
-    if (stuckCount > 4)
+    if (stuckCount > 9)
     {
+        booster++;
+        Console.WriteLine($@"We got stuck. Starting over with a low-end candidate. Current booster: {booster}");
         top10 = top100Networks.OrderBy(x => x.Value).Where(x=>x.Value < double.MaxValue).TakeLast(50).ToList();
     }
     else
@@ -91,7 +105,7 @@ while (true)
     
     var bestOutput = top10[0].Key.IOBuffers.First(x => x.Access == IOBufferAccess.ReadWrite).Buffer;
 
-    Console.WriteLine("Best Score - " + top10[0].Value  + " - " + top10[0].Key.Note + " - " + top10[0].Key.SpikedPercentage +" - " + Encoding.UTF8.GetString(bestOutput));
+    Console.WriteLine("G: "+ generation + " - Best Score - " + top10[0].Value  + " - " + top10[0].Key.Note + " - " + top10[0].Key.SpikedPercentage +" - " + Encoding.UTF8.GetString(bestOutput));
 
     if (top10[0].Value == lastScore)
     {
@@ -110,7 +124,7 @@ while (true)
         var existing = new Network(n.Key);
         top100Networks[existing] = double.MaxValue;
 
-        for(int x = 0; x < 5 /** (stuckCount + 1)*/; x++)
+        for(int x = 0; x < 5 * (stuckCount + 1); x++)
         {
             var clone = new Network(n.Key);
 
