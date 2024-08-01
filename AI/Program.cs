@@ -5,7 +5,7 @@ using System.Xml;
 
 var outputBuffer = new IOBuffer(26, IOBufferAccess.ReadWrite, true);
 var random = new LcgRandom(111);
-var neuronCount = 1238;
+var neuronCount = 2131;
 
 var network = new Network(
     neuronCount: neuronCount,
@@ -52,9 +52,9 @@ while (true)
         var rcr = inputBuffer.ReadCoverageRatio();
         var wcr = outputBuffer.WriteCoverageRatio();
 
-        if (network.Key.SpikedPercentage < 0.80f && activityBootstrapped == false)
+        if (network.Key.SpikedPercentage < 0.95f && activityBootstrapped == false)
         {
-            network.Key.Note = "Activity Bootstrapping (80%)";
+            network.Key.Note = "Activity Bootstrapping (95%)";
             top100Networks[network.Key] = 1_000_000_000 - (int)(1_000_000_000 * (network.Key.SpikedPercentage));
         }
         else if (rcr < 1.0f)
