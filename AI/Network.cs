@@ -33,7 +33,7 @@ internal class Network
             var neuron = new Neuron
             {
                 Inputs = new List<Neuron>(),
-                Type = (_random.NextInt32(0, 100) < 20) ? NeuronType.Inhibitory : NeuronType.Excitatory,
+                Type = (_random.NextInt32(0, 100) < 10) ? NeuronType.Inhibitory : NeuronType.Excitatory,
             };
 
             neurons[x] = neuron;
