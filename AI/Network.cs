@@ -594,14 +594,17 @@ internal class Network
         if (outputIndex == 0 && neuron.Output0Weight.HasValue)
         {
             neuron.Output0Weight = _random.NextDouble();
+            neuron.Output0Delay = _random.NextInt32(_minConnectivityDelayTicks, _maxConnectivityDelayTicks);
         }
         else if (outputIndex == 1 && neuron.Output1Weight.HasValue)
         {
             neuron.Output1Weight = _random.NextDouble();
+            neuron.Output1Delay = _random.NextInt32(_minConnectivityDelayTicks, _maxConnectivityDelayTicks);
         }
         else if (outputIndex == 2 && neuron.Output2Weight.HasValue)
         {
             neuron.Output2Weight = _random.NextDouble();
+            neuron.Output2Delay = _random.NextInt32(_minConnectivityDelayTicks, _maxConnectivityDelayTicks);
         }
     }
 }

@@ -5,7 +5,7 @@ using System.Xml;
 
 var outputBuffer = new IOBuffer(26, IOBufferAccess.ReadWrite, true);
 var random = new LcgRandom(111);
-var neuronCount = 1111;
+var neuronCount = 1555;
 
 var network = new Network(
     neuronCount: neuronCount,
@@ -62,7 +62,7 @@ while (true)
         {
             bootstrapping = false;
             network.Key.Note = "IO: Read constrained";
-            top100Networks[network.Key] = 100_000_000 - (int)(100_000_000 * rcr) + 10_000_000;
+            top100Networks[network.Key] = 100_000_000 - (int)(100_000_000 * rcr) + 100_000_000;
         }
         else if (inputBuffer.FinalReadTick > outputBuffer.FirstWriteTick)
         {
@@ -89,15 +89,15 @@ while (true)
 
     List<KeyValuePair<Network, double>> top10;
 
-    if (stuckCount > 5)
+    if (stuckCount > 10)
     {
         booster++;
         Console.WriteLine($@"We got stuck. Starting over with a low-end candidate. Current booster: {booster}");
-        top10 = top100Networks.OrderBy(x => x.Value).Where(x=>x.Value < double.MaxValue).TakeLast(10).ToList();
+        top10 = top100Networks.OrderBy(x => x.Value).Where(x=>x.Value < double.MaxValue).TakeLast(50).ToList();
     }
     else
     {
-        top10 = top100Networks.OrderBy(x => x.Value).Take(10).ToList();
+        top10 = top100Networks.OrderBy(x => x.Value).Take(50).ToList();
     }
     
     var bestOutput = top10[0].Key.IOBuffers.First(x => x.Access == IOBufferAccess.ReadWrite).Buffer;
